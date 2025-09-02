@@ -1,0 +1,256 @@
+services:
+  # ===============================
+  # MYSQL DATABASE
+  # ===============================
+  mysql:
+    image: mysql:8.0
+    container_name: oauth-mysql-prod
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: ${MYSQL_TIMEZONE}
+    command:
+      - "--default-authentication-plugin=mysql_native_password"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+      - "--innodb-buffer-pool-size=256M"
+      - "--innodb-log-file-size=64M"
+      - "--max-connections=200"
+      - "--query-cache-size=64M"
+      - "--query-cache-type=1"
+      - "--sql-mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
+    ports:
+      - "127.0.0.1:${MYSQL_PORT}:3306"
+    volumes:
+      - mysql-prod-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - oauth-prod-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ===============================
+  # REDIS CACHE
+  # ===============================
+  redis:
+    image: redis:7-alpine
+    container_name: oauth-redis-prod
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--requirepass"
+      - "${REDIS_PASSWORD}"
+      - "--maxmemory"
+      - "256mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
+      - "--tcp-keepalive"
+      - "300"
+      - "--timeout"
+      - "300"
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    volumes:
+      - redis-prod-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - oauth-prod-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ===============================
+  # OAUTH BACKEND APPLICATION
+  # ===============================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      target: production
+    container_name: oauth-backend-prod
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      - NODE_ENV=production
+      - PORT=${PORT}
+      - API_VERSION=${API_VERSION}
+      - BASE_URL=${BASE_URL}
+
+      # Database
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_SSL=false
+      - MYSQL_TIMEZONE=${MYSQL_TIMEZONE}
+      - MYSQL_CONNECTION_LIMIT=${MYSQL_CONNECTION_LIMIT}
+      - MYSQL_ACQUIRE_TIMEOUT=${MYSQL_ACQUIRE_TIMEOUT}
+      - MYSQL_TIMEOUT=${MYSQL_TIMEOUT}
+
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+      - REDIS_TTL=${REDIS_TTL}
+      - REDIS_KEY_PREFIX=${REDIS_KEY_PREFIX}
+
+      # JWT
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+
+      # OAuth Providers
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET}
+      - MICROSOFT_TENANT_ID=${MICROSOFT_TENANT_ID}
+      - MICROSOFT_CALLBACK_URL=${MICROSOFT_CALLBACK_URL}
+
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GITHUB_CALLBACK_URL=${GITHUB_CALLBACK_URL}
+
+      - LINKEDIN_CLIENT_ID=${LINKEDIN_CLIENT_ID}
+      - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET}
+      - LINKEDIN_CALLBACK_URL=${LINKEDIN_CALLBACK_URL}
+
+      # Email
+      - EMAIL_SERVICE=${EMAIL_SERVICE}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_SECURE=${EMAIL_SECURE}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+
+      # Frontend
+      - FRONTEND_URL=${FRONTEND_URL}
+      - FRONTEND_SUCCESS_REDIRECT=${FRONTEND_SUCCESS_REDIRECT}
+      - FRONTEND_ERROR_REDIRECT=${FRONTEND_ERROR_REDIRECT}
+      - FRONTEND_EMAIL_VERIFICATION_URL=${FRONTEND_EMAIL_VERIFICATION_URL}
+      - FRONTEND_PASSWORD_RESET_URL=${FRONTEND_PASSWORD_RESET_URL}
+
+      # Security
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS}
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS}
+      - LOCKOUT_DURATION_MINUTES=${LOCKOUT_DURATION_MINUTES}
+
+      # Rate Limiting
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS}
+      - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS}
+      - RATE_LIMIT_AUTH_WINDOW_MS=${RATE_LIMIT_AUTH_WINDOW_MS}
+      - RATE_LIMIT_AUTH_MAX_REQUESTS=${RATE_LIMIT_AUTH_MAX_REQUESTS}
+
+      # CORS
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - CORS_CREDENTIALS=${CORS_CREDENTIALS}
+      - CORS_METHODS=${CORS_METHODS}
+      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FILE=${LOG_FILE}
+      - LOG_ERROR_FILE=${LOG_ERROR_FILE}
+      - LOG_MAX_SIZE=${LOG_MAX_SIZE}
+      - LOG_MAX_FILES=${LOG_MAX_FILES}
+
+      # Features
+      - FEATURE_2FA_ENABLED=${FEATURE_2FA_ENABLED}
+      - FEATURE_EMAIL_VERIFICATION_REQUIRED=${FEATURE_EMAIL_VERIFICATION_REQUIRED}
+      - FEATURE_OAUTH_ACCOUNT_LINKING=${FEATURE_OAUTH_ACCOUNT_LINKING}
+      - FEATURE_ADMIN_PANEL=${FEATURE_ADMIN_PANEL}
+      - FEATURE_AUDIT_LOGGING=${FEATURE_AUDIT_LOGGING}
+      - FEATURE_RATE_LIMITING=${FEATURE_RATE_LIMITING}
+      - FEATURE_PHONE_VERIFICATION_ENABLED=${FEATURE_PHONE_VERIFICATION_ENABLED}
+
+      # Audit
+      - AUDIT_LOG_ENABLED=${AUDIT_LOG_ENABLED}
+      - AUDIT_LOG_RETENTION_DAYS=${AUDIT_LOG_RETENTION_DAYS}
+
+      # SMS (Twilio)
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_VERIFY_SERVICE_SID=${TWILIO_VERIFY_SERVICE_SID}
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - oauth-prod-net
+      - proxy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT}/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql-prod-data:
+    driver: local
+  redis-prod-data:
+    driver: local
+
+networks:
+  oauth-prod-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  proxy-network:
+    external: true

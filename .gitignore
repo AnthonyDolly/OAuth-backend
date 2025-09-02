@@ -1,0 +1,98 @@
+# ===============================
+# OAUTH BACKEND GITIGNORE
+# ===============================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.prod
+.env.staging
+
+# Production files (keep templates)
+# .env.prod.example should be committed
+# env.prod.example should be committed
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker volumes (local development)
+mysql-data/
+redis-data/
+
+# Backups (should not be committed)
+backups/
+
+# SSL certificates
+nginx/ssl/
+ssl/
+certs/
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Test files
+test-results/
+playwright-report/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+
+# Monitoring and profiling
+newrelic_agent.log
+*.heapsnapshot
+
+# Local development overrides
+.env.local.override
