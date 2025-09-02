@@ -80,6 +80,7 @@ help: ## Mostrar esta ayuda
 	@echo "  make env-check     - Verificar variables de entorno"
 	@echo
 	@echo -e "$(GREEN)BASE DE DATOS:$(NC)"
+	@echo "  make prod-setup-db - Setup completo de BD para producción"
 	@echo "  make db-migrate    - Ejecutar migraciones de base de datos"
 	@echo "  make db-generate   - Generar cliente Prisma"
 	@echo "  make db-seed       - Poblar base de datos con datos de ejemplo"
@@ -172,8 +173,11 @@ prod-deploy: ## Despliegue completo a producción
 	@$(MAKE) prod-build
 	@$(MAKE) prod-down
 	@$(MAKE) prod-up
-	@echo "⏳ Esperando a que los servicios estén listos..."
-	@sleep 30
+	@echo "⏳ Esperando a que la base de datos esté lista..."
+	@sleep 20
+	@$(MAKE) prod-setup-db
+	@echo "⏳ Esperando a que la aplicación esté lista..."
+	@sleep 10
 	@$(MAKE) health
 	$(call print_message,"✅ Despliegue completado")
 	@echo "🌐 Endpoints disponibles:"
@@ -352,22 +356,34 @@ env-check: ## Verificar variables de entorno
 # BASE DE DATOS
 # ========================================
 
+.PHONY: prod-setup-db
+prod-setup-db: ## Setup completo de base de datos para producción
+	$(call print_step,"🗄️ Configurando base de datos para producción...")
+	@echo "⏳ Esperando a que MySQL esté disponible..."
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec mysql mysqladmin ping --silent --wait=30 -u $$(grep MYSQL_USER $(ENV_PROD) | cut -d'=' -f2) -p$$(grep MYSQL_PASSWORD $(ENV_PROD) | cut -d'=' -f2) || (echo "❌ MySQL no está disponible" && exit 1)
+	@echo "✅ MySQL está disponible"
+	@echo "🔧 Generando cliente Prisma..."
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma generate
+	@echo "📦 Ejecutando migraciones..."
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma migrate deploy
+	$(call print_message,"✅ Base de datos configurada correctamente")
+
 .PHONY: db-migrate
 db-migrate: ## Ejecutar migraciones de base de datos
 	$(call print_step,"🗄️ Ejecutando migraciones de base de datos...")
-	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma migrate deploy
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma migrate deploy
 	$(call print_message,"✅ Migraciones aplicadas")
 
 .PHONY: db-generate
 db-generate: ## Generar cliente Prisma
 	$(call print_step,"🔧 Generando cliente Prisma...")
-	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma generate
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma generate
 	$(call print_message,"✅ Cliente Prisma generado")
 
 .PHONY: db-seed
 db-seed: ## Poblar base de datos con datos de ejemplo
 	$(call print_step,"🌱 Poblando base de datos con datos de ejemplo...")
-	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npm run seed:run
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npm run seed:run
 	$(call print_message,"✅ Base de datos poblada")
 
 .PHONY: db-reset
@@ -380,7 +396,7 @@ db-reset: ## Resetear base de datos (¡CUIDADO!)
 .PHONY: db-reset-confirm
 db-reset-confirm: ## Resetear base de datos (confirmado)
 	$(call print_warning,"⚠️ Reseteando base de datos...")
-	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma migrate reset --force
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma migrate reset --force
 	$(call print_message,"✅ Base de datos reseteada")
 
 .PHONY: db-setup
