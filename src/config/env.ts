@@ -1,5 +1,7 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import Joi from 'joi';
+
+dotenv.config();
 
 export type NodeEnv = 'development' | 'production' | 'test';
 
