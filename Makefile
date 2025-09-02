@@ -1,13 +1,12 @@
-# ===============================
+# ========================================
 # MAKEFILE PARA OAUTH BACKEND
-# ===============================
+# ========================================
 
 # Variables
 PROJECT_NAME = oauth-backend
 DOCKER_COMPOSE_DEV = docker-compose.yml
 DOCKER_COMPOSE_PROD = docker-compose.prod.yml
 ENV_PROD = .env.prod
-ENV_DEV = .env
 
 # Colores para output
 RED = \033[0;31m
@@ -33,18 +32,11 @@ define print_step
 	@echo -e "$(BLUE)[STEP]$(NC) $1"
 endef
 
-# Variables de entorno leídas dinámicamente
-PORT_VAL = $(shell grep "^PORT=" .env.prod 2>/dev/null | sed 's/^PORT=//' | tr -d '\r' || echo "3001")
-MYSQL_USER_VAL = $(shell grep "^MYSQL_USER=" .env.prod 2>/dev/null | sed 's/^MYSQL_USER=//' | tr -d '\r' || echo "root")
-MYSQL_PASSWORD_VAL = $(shell grep "^MYSQL_PASSWORD=" .env.prod 2>/dev/null | sed 's/^MYSQL_PASSWORD=//' | tr -d '\r' || echo "")
-MYSQL_DATABASE_VAL = $(shell grep "^MYSQL_DATABASE=" .env.prod 2>/dev/null | sed 's/^MYSQL_DATABASE=//' | tr -d '\r' || echo "auth_backend")
-REDIS_PASSWORD_VAL = $(shell grep "^REDIS_PASSWORD=" .env.prod 2>/dev/null | sed 's/^REDIS_PASSWORD=//' | tr -d '\r' || echo "")
-
 # Comandos por defecto
 .PHONY: help
 help: ## Mostrar esta ayuda
 	@echo -e "$(BLUE)========================================$(NC)"
-	@echo -e "$(BLUE)🔐 COMANDOS OAUTH BACKEND DISPONIBLES$(NC)"
+	@echo -e "$(BLUE)🔐 COMANDOS OAUTH BACKEND$(NC)"
 	@echo -e "$(BLUE)========================================$(NC)"
 	@echo
 	@echo -e "$(GREEN)DESARROLLO:$(NC)"
@@ -53,7 +45,6 @@ help: ## Mostrar esta ayuda
 	@echo "  make dev-down      - Parar servicios de desarrollo"
 	@echo "  make dev-logs      - Ver logs de desarrollo"
 	@echo "  make dev-restart   - Reiniciar servicios de desarrollo"
-	@echo "  make dev-shell     - Acceder al shell del contenedor app (desarrollo)"
 	@echo
 	@echo -e "$(GREEN)PRODUCCIÓN:$(NC)"
 	@echo "  make prod-build    - Construir imagen de producción"
@@ -62,7 +53,6 @@ help: ## Mostrar esta ayuda
 	@echo "  make prod-logs     - Ver logs de producción"
 	@echo "  make prod-restart  - Reiniciar servicios de producción"
 	@echo "  make prod-deploy   - Despliegue completo a producción"
-	@echo "  make prod-shell    - Acceder al shell del contenedor app (producción)"
 	@echo
 	@echo -e "$(GREEN)MONITOREO:$(NC)"
 	@echo "  make status        - Estado de todos los servicios"
@@ -79,121 +69,106 @@ help: ## Mostrar esta ayuda
 	@echo "  make clean-project-volumes - Eliminar volúmenes del proyecto (requiere confirmación)"
 	@echo "  make clean-project-volumes-confirm - Eliminar volúmenes del proyecto (confirmado)"
 	@echo "  make prune         - Limpiar recursos no utilizados"
-	@echo "  make backup-db     - Backup de base de datos MySQL"
-	@echo "  make restore-db    - Restaurar desde backup (requiere parámetro)"
-	@echo "  make restore-db-file - Restaurar desde backup específico"
+	@echo "  make backup        - Backup de volúmenes"
+	@echo "  make restore       - Restaurar desde backup (requiere parámetro)"
+	@echo "  make restore-file  - Restaurar desde backup específico"
 	@echo
 	@echo -e "$(GREEN)UTILIDADES:$(NC)"
 	@echo "  make shell         - Acceder al shell del contenedor app"
 	@echo "  make db-shell      - Acceder al shell de MySQL"
 	@echo "  make redis-shell   - Acceder al shell de Redis"
 	@echo "  make env-check     - Verificar variables de entorno"
-	@echo "  make show-env      - Mostrar variables de entorno actuales"
-	@echo "  make generate-secret - Generar secreto JWT seguro"
 	@echo
 	@echo -e "$(GREEN)BASE DE DATOS:$(NC)"
 	@echo "  make db-migrate    - Ejecutar migraciones de base de datos"
 	@echo "  make db-generate   - Generar cliente Prisma"
-	@echo "  make db-seed       - Poblar base de datos con datos iniciales"
+	@echo "  make db-seed       - Poblar base de datos con datos de ejemplo"
 	@echo "  make db-reset      - Resetear base de datos (requiere confirmación)"
 	@echo "  make db-reset-confirm - Resetear base de datos (confirmado)"
 	@echo "  make db-setup      - Configuración completa de base de datos"
 	@echo
-	@echo -e "$(GREEN)NPM SCRIPTS:$(NC)"
-	@echo "  make install       - Instalar dependencias"
-	@echo "  make build         - Construir aplicación"
-	@echo "  make start         - Iniciar aplicación"
-	@echo "  make dev           - Iniciar desarrollo con hot reload"
-	@echo "  make test          - Ejecutar tests"
-	@echo "  make lint          - Ejecutar linter"
-	@echo
 
-# ===============================
+# ========================================
 # DESARROLLO
-# ===============================
+# ========================================
 
 .PHONY: dev-build
 dev-build: ## Construir imagen de desarrollo
 	$(call print_step,"🔨 Construyendo imagen de desarrollo...")
-	@docker compose -f $(DOCKER_COMPOSE_DEV) build
+	@docker compose build
 	$(call print_message,"✅ Imagen de desarrollo construida")
 
 .PHONY: dev-up
 dev-up: ## Iniciar servicios de desarrollo
 	$(call print_step,"🚀 Iniciando servicios de desarrollo...")
-	@docker compose -f $(DOCKER_COMPOSE_DEV) up -d
+	@docker compose up -d
 	$(call print_message,"✅ Servicios de desarrollo iniciados")
 
 .PHONY: dev-down
 dev-down: ## Parar servicios de desarrollo
 	$(call print_step,"🛑 Parando servicios de desarrollo...")
-	@docker compose -f $(DOCKER_COMPOSE_DEV) down
+	@docker compose down
 	$(call print_message,"✅ Servicios de desarrollo detenidos")
 
 .PHONY: dev-logs
 dev-logs: ## Ver logs de desarrollo
 	$(call print_step,"📋 Mostrando logs de desarrollo...")
-	@docker compose -f $(DOCKER_COMPOSE_DEV) logs -f
+	@docker compose logs -f
 
 .PHONY: dev-restart
 dev-restart: ## Reiniciar servicios de desarrollo
 	$(call print_step,"🔄 Reiniciando servicios de desarrollo...")
-	@docker compose -f $(DOCKER_COMPOSE_DEV) restart
+	@docker compose restart
 	$(call print_message,"✅ Servicios de desarrollo reiniciados")
 
-.PHONY: dev-shell
-dev-shell: ## Acceder al shell del contenedor app (desarrollo)
-	$(call print_step,"🐚 Accediendo al shell del contenedor app (desarrollo)...")
-	@docker compose -f $(DOCKER_COMPOSE_DEV) exec app sh
-
-# ===============================
+# ========================================
 # PRODUCCIÓN
-# ===============================
+# ========================================
 
 .PHONY: prod-build
-prod-build: check-env-prod ## Construir imagen de producción
+prod-build: ## Construir imagen de producción
 	$(call print_step,"🔨 Construyendo imagen de producción...")
+	@if [ ! -f "$(ENV_PROD)" ]; then \
+		$(call print_error,"No se encontró el archivo $(ENV_PROD). Crea uno basado en env.prod.example"); \
+		exit 1; \
+	fi
 	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) build --no-cache
 	$(call print_message,"✅ Imagen de producción construida")
 
 .PHONY: prod-up
-prod-up: check-env-prod ## Iniciar servicios de producción
+prod-up: ## Iniciar servicios de producción
 	$(call print_step,"🚀 Iniciando servicios de producción...")
+	@if [ ! -f "$(ENV_PROD)" ]; then \
+		$(call print_error,"No se encontró el archivo $(ENV_PROD). Crea uno basado en env.prod.example"); \
+		exit 1; \
+	fi
 	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) up -d
 	$(call print_message,"✅ Servicios de producción iniciados")
 
 .PHONY: prod-down
 prod-down: ## Parar servicios de producción
 	$(call print_step,"🛑 Parando servicios de producción...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) down; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) down; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) down
 	$(call print_message,"✅ Servicios de producción detenidos")
 
 .PHONY: prod-logs
 prod-logs: ## Ver logs de producción
 	$(call print_step,"📋 Mostrando logs de producción...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) logs -f; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f
 
 .PHONY: prod-restart
 prod-restart: ## Reiniciar servicios de producción
 	$(call print_step,"🔄 Reiniciando servicios de producción...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) restart; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) restart; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) restart
 	$(call print_message,"✅ Servicios de producción reiniciados")
 
 .PHONY: prod-deploy
-prod-deploy: check-env-prod ## Despliegue completo a producción
+prod-deploy: ## Despliegue completo a producción
 	$(call print_step,"🚀 Iniciando despliegue completo a producción...")
+	@if [ ! -f "$(ENV_PROD)" ]; then \
+		$(call print_error,"No se encontró el archivo $(ENV_PROD). Crea uno basado en env.prod.example"); \
+		exit 1; \
+	fi
 	@$(MAKE) prod-build
 	@$(MAKE) prod-down
 	@$(MAKE) prod-up
@@ -205,32 +180,19 @@ prod-deploy: check-env-prod ## Despliegue completo a producción
 	@echo "  • Health Check: http://localhost:3001/api/v1/health"
 	@echo "  • API Version: http://localhost:3001/api/v1/version"
 
-.PHONY: prod-shell
-prod-shell: ## Acceder al shell del contenedor app (producción)
-	$(call print_step,"🐚 Accediendo al shell del contenedor app (producción)...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app sh; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec app sh; \
-	fi
-
-# ===============================
+# ========================================
 # MONITOREO
-# ===============================
+# ========================================
 
 .PHONY: status
 status: ## Estado de todos los servicios
 	$(call print_step,"📊 Estado de servicios...")
 	@echo "=========================================="
 	@echo "🐳 SERVICIOS DE DESARROLLO:"
-	@docker compose -f $(DOCKER_COMPOSE_DEV) ps 2>/dev/null || echo "No hay servicios de desarrollo activos"
+	@docker compose ps
 	@echo
 	@echo "🚀 SERVICIOS DE PRODUCCIÓN:"
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) ps; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) ps; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) ps
 	@echo "=========================================="
 
 .PHONY: health
@@ -238,22 +200,12 @@ health: ## Health check de servicios
 	$(call print_step,"🏥 Health check de servicios...")
 	@echo "=========================================="
 	@echo "🔍 VERIFICANDO SERVICIOS DE PRODUCCIÓN:"
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 	@echo
 	@echo "🌐 HEALTH CHECKS:"
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T app curl -f http://localhost:3001/api/v1/health > /dev/null 2>&1 && echo "✅ Aplicación: OK" || echo "❌ Aplicación: FAILED"; \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T mysql mysqladmin ping -h localhost > /dev/null 2>&1 && echo "✅ MySQL: OK" || echo "❌ MySQL: FAILED"; \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T redis redis-cli ping > /dev/null 2>&1 && echo "✅ Redis: OK" || echo "❌ Redis: FAILED"; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec -T app curl -f http://localhost:3001/api/v1/health > /dev/null 2>&1 && echo "✅ Aplicación: OK" || echo "❌ Aplicación: FAILED"; \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec -T mysql mysqladmin ping -h localhost > /dev/null 2>&1 && echo "✅ MySQL: OK" || echo "❌ MySQL: FAILED"; \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec -T redis redis-cli ping > /dev/null 2>&1 && echo "✅ Redis: OK" || echo "❌ Redis: FAILED"; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T app wget --no-verbose --tries=1 --spider http://localhost:3001/api/v1/health > /dev/null 2>&1 && echo "✅ Aplicación: OK" || echo "❌ Aplicación: FAILED"
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T mysql mysqladmin ping -h localhost -u oauth_user -p$$(grep MYSQL_PASSWORD $(ENV_PROD) | cut -d'=' -f2) > /dev/null 2>&1 && echo "✅ MySQL: OK" || echo "❌ MySQL: FAILED"
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T redis redis-cli -a $$(grep REDIS_PASSWORD $(ENV_PROD) | cut -d'=' -f2) ping > /dev/null 2>&1 && echo "✅ Redis: OK" || echo "❌ Redis: FAILED"
 	@echo "=========================================="
 
 .PHONY: stats
@@ -261,7 +213,7 @@ stats: ## Estadísticas de Docker
 	$(call print_step,"📊 Estadísticas de Docker...")
 	@echo "=========================================="
 	@echo "💾 USO DE RECURSOS:"
-	@docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}" 2>/dev/null || echo "No hay contenedores activos"
+	@docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}"
 	@echo
 	@echo "📁 VOLÚMENES:"
 	@docker volume ls --format "table {{.Name}}\t{{.Driver}}\t{{.Size}}"
@@ -272,41 +224,25 @@ stats: ## Estadísticas de Docker
 
 .PHONY: logs-app
 logs-app: ## Logs de la aplicación
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f app; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) logs -f app; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f app
 
 .PHONY: logs-db
 logs-db: ## Logs de MySQL
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f mysql; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) logs -f mysql; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f mysql
 
 .PHONY: logs-redis
 logs-redis: ## Logs de Redis
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f redis; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) logs -f redis; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs -f redis
 
-# ===============================
+# ========================================
 # MANTENIMIENTO
-# ===============================
+# ========================================
 
 .PHONY: clean
 clean: ## Limpiar contenedores e imágenes
 	$(call print_step,"🧹 Limpiando contenedores e imágenes...")
-	@docker compose -f $(DOCKER_COMPOSE_DEV) down 2>/dev/null || true
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) down 2>/dev/null || true; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) down 2>/dev/null || true; \
-	fi
+	@docker compose down
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) down
 	@docker system prune -f
 	@docker image prune -f
 	$(call print_message,"✅ Limpieza completada")
@@ -351,78 +287,49 @@ prune: ## Limpiar recursos no utilizados
 	@docker network prune -f
 	$(call print_message,"✅ Limpieza de recursos completada")
 
-.PHONY: backup-db
-backup-db: ## Backup de base de datos MySQL
-	$(call print_step,"🗄️ Creando backup de base de datos...")
+.PHONY: backup
+backup: ## Backup de volúmenes
+	$(call print_step,"🗄️ Creando backup de volúmenes...")
 	@mkdir -p backups
-	@MYSQL_USER=$(MYSQL_USER_VAL); \
-	MYSQL_PASSWORD=$(MYSQL_PASSWORD_VAL); \
-	MYSQL_DATABASE=$(MYSQL_DATABASE_VAL); \
-	BACKUP_FILE="backup_db_$$(date +%Y%m%d_%H%M%S).sql.gz"; \
-	if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T mysql mysqldump -u $$MYSQL_USER -p$$MYSQL_PASSWORD $$MYSQL_DATABASE | gzip > backups/$$BACKUP_FILE; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec -T mysql mysqldump -u $$MYSQL_USER -p$$MYSQL_PASSWORD $$MYSQL_DATABASE | gzip > backups/$$BACKUP_FILE; \
-	fi; \
+	@BACKUP_FILE="backup_$$(date +%Y%m%d_%H%M%S).tar.gz"; \
+	docker run --rm -v $(PROJECT_NAME)_mysql_data_prod:/data -v $$(pwd)/backups:/backup alpine tar czf /backup/$$BACKUP_FILE -C /data .; \
 	$(call print_message,"✅ Backup creado: $$BACKUP_FILE")
 
-.PHONY: restore-db
-restore-db: ## Restaurar desde backup
+.PHONY: restore
+restore: ## Restaurar desde backup
 	$(call print_step,"🔄 Restaurando desde backup...")
 	@ls -la backups/ 2>/dev/null || echo "No hay backups disponibles"
 	@echo "❌ Especifica el archivo de backup como parámetro"
-	@echo "💡 Uso: make restore-db-file FILE=nombre_archivo.sql.gz"
+	@echo "💡 Uso: make restore-file FILE=nombre_archivo.tar.gz"
 
-.PHONY: restore-db-file
-restore-db-file: ## Restaurar desde backup específico
+.PHONY: restore-file
+restore-file: ## Restaurar desde backup específico
 	$(call print_step,"🔄 Restaurando desde backup: $(FILE)")
 	@if [ -f "backups/$(FILE)" ]; then \
-		MYSQL_USER=$(MYSQL_USER_VAL); \
-		MYSQL_PASSWORD=$(MYSQL_PASSWORD_VAL); \
-		MYSQL_DATABASE=$(MYSQL_DATABASE_VAL); \
-		if [ -f "$(ENV_PROD)" ]; then \
-			gunzip < backups/$(FILE) | docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T mysql mysql -u $$MYSQL_USER -p$$MYSQL_PASSWORD $$MYSQL_DATABASE; \
-		else \
-			gunzip < backups/$(FILE) | docker compose -f $(DOCKER_COMPOSE_PROD) exec -T mysql mysql -u $$MYSQL_USER -p$$MYSQL_PASSWORD $$MYSQL_DATABASE; \
-		fi; \
+		docker run --rm -v $(PROJECT_NAME)_mysql_data_prod:/data -v $$(pwd)/backups:/backup alpine tar xzf /backup/$(FILE) -C /data; \
 		$(call print_message,"✅ Restauración completada"); \
 	else \
 		$(call print_error,"❌ Archivo backups/$(FILE) no encontrado"); \
 	fi
 
-# ===============================
+# ========================================
 # UTILIDADES
-# ===============================
+# ========================================
 
 .PHONY: shell
 shell: ## Acceder al shell del contenedor app
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app sh; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec app sh; \
-	fi
+	$(call print_step,"🐚 Accediendo al shell del contenedor app...")
+	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app sh
 
 .PHONY: db-shell
 db-shell: ## Acceder al shell de MySQL
 	$(call print_step,"🐚 Accediendo al shell de MySQL...")
-	@MYSQL_USER=$(MYSQL_USER_VAL); \
-	MYSQL_PASSWORD=$(MYSQL_PASSWORD_VAL); \
-	MYSQL_DATABASE=$(MYSQL_DATABASE_VAL); \
-	if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec mysql mysql -u $$MYSQL_USER -p$$MYSQL_PASSWORD $$MYSQL_DATABASE; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec mysql mysql -u $$MYSQL_USER -p$$MYSQL_PASSWORD $$MYSQL_DATABASE; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) exec mysql mysql -u $$(grep MYSQL_USER $(ENV_PROD) | cut -d'=' -f2) -p$$(grep MYSQL_PASSWORD $(ENV_PROD) | cut -d'=' -f2) $$(grep MYSQL_DATABASE $(ENV_PROD) | cut -d'=' -f2)
 
 .PHONY: redis-shell
 redis-shell: ## Acceder al shell de Redis
 	$(call print_step,"🐚 Accediendo al shell de Redis...")
-	@REDIS_PASSWORD=$(REDIS_PASSWORD_VAL); \
-	if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec redis redis-cli -a $$REDIS_PASSWORD; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec redis redis-cli -a $$REDIS_PASSWORD; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) exec redis redis-cli -a $$(grep REDIS_PASSWORD $(ENV_PROD) | cut -d'=' -f2)
 
 .PHONY: env-check
 env-check: ## Verificar variables de entorno
@@ -431,98 +338,33 @@ env-check: ## Verificar variables de entorno
 	@echo "📋 VARIABLES DE ENTORNO DE PRODUCCIÓN:"
 	@if [ -f "$(ENV_PROD)" ]; then \
 		echo "✅ Archivo $(ENV_PROD) encontrado"; \
-		echo "📄 Contenido (valores sensibles ocultos):"; \
+		echo "📄 Contenido:"; \
 		cat $(ENV_PROD) | grep -v "^#" | grep -v "^$$" | sed 's/=.*/=***/'; \
 	else \
 		echo "❌ Archivo $(ENV_PROD) no encontrado"; \
-		echo "💡 Crea uno basado en env.prod.example"; \
 	fi
 	@echo "=========================================="
 
-.PHONY: show-env
-show-env: ## Mostrar variables de entorno actuales
-	$(call print_step,"📋 Variables de entorno actuales...")
-	@echo "=========================================="
-	@echo "🔧 VARIABLES LEÍDAS DEL $(ENV_PROD):"
-	@echo "PORT: $(PORT_VAL)"
-	@echo "MYSQL_USER: $(MYSQL_USER_VAL)"
-	@echo "MYSQL_DATABASE: $(MYSQL_DATABASE_VAL)"
-	@echo "REDIS_PASSWORD: *** (hidden)"
-	@echo "MYSQL_PASSWORD: *** (hidden)"
-	@echo
-	@echo "📁 ESTADO DE ARCHIVOS:"
-	@if [ -f "$(ENV_PROD)" ]; then \
-		echo "✅ $(ENV_PROD) existe"; \
-		if grep -q "CHANGE_THIS" $(ENV_PROD) 2>/dev/null; then \
-			echo "⚠️  Contiene valores por defecto (CHANGE_THIS)"; \
-		else \
-			echo "✅ No contiene valores por defecto"; \
-		fi; \
-	else \
-		echo "❌ $(ENV_PROD) no encontrado"; \
-	fi
-	@echo "=========================================="
-
-.PHONY: generate-secret
-generate-secret: ## Generar secreto JWT seguro
-	$(call print_step,"🔐 Generando secreto JWT seguro...")
-	@SECRET=$$(openssl rand -hex 32); \
-	echo "Tu nuevo secreto JWT:"; \
-	echo "$$SECRET"; \
-	echo ""; \
-	echo "💡 Copia este valor al $(ENV_PROD):"; \
-	echo "JWT_SECRET=$$SECRET"
-
-.PHONY: check-env-prod
-check-env-prod: ## Verificar que existe el archivo .env.prod y no tiene valores por defecto
-	@if [ ! -f "$(ENV_PROD)" ]; then \
-		$(call print_error,"No se encontró el archivo $(ENV_PROD)."); \
-		echo "💡 Crea uno basado en env.prod.example:"; \
-		echo "   cp env.prod.example $(ENV_PROD)"; \
-		exit 1; \
-	fi
-	@if grep -q "CHANGE_THIS" $(ENV_PROD); then \
-		$(call print_error,"$(ENV_PROD) contiene valores por defecto que deben ser actualizados."); \
-		echo "💡 Valores que necesitan actualización:"; \
-		grep "CHANGE_THIS" $(ENV_PROD) | sed 's/^/   • /'; \
-		echo ""; \
-		echo "🔐 Genera secretos seguros con:"; \
-		echo "   make generate-secret"; \
-		exit 1; \
-	fi
-
-# ===============================
+# ========================================
 # BASE DE DATOS
-# ===============================
+# ========================================
 
 .PHONY: db-migrate
 db-migrate: ## Ejecutar migraciones de base de datos
 	$(call print_step,"🗄️ Ejecutando migraciones de base de datos...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma migrate deploy; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma migrate deploy; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma migrate deploy
 	$(call print_message,"✅ Migraciones aplicadas")
 
 .PHONY: db-generate
 db-generate: ## Generar cliente Prisma
 	$(call print_step,"🔧 Generando cliente Prisma...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma generate; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma generate; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma generate
 	$(call print_message,"✅ Cliente Prisma generado")
 
 .PHONY: db-seed
-db-seed: ## Poblar base de datos con datos iniciales
-	$(call print_step,"🌱 Poblando base de datos con datos iniciales...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npm run seed:run; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec app npm run seed:run; \
-	fi
+db-seed: ## Poblar base de datos con datos de ejemplo
+	$(call print_step,"🌱 Poblando base de datos con datos de ejemplo...")
+	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npm run seed:run
 	$(call print_message,"✅ Base de datos poblada")
 
 .PHONY: db-reset
@@ -535,11 +377,7 @@ db-reset: ## Resetear base de datos (¡CUIDADO!)
 .PHONY: db-reset-confirm
 db-reset-confirm: ## Resetear base de datos (confirmado)
 	$(call print_warning,"⚠️ Reseteando base de datos...")
-	@if [ -f "$(ENV_PROD)" ]; then \
-		docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec app npx prisma migrate reset --force; \
-	else \
-		docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma migrate reset --force; \
-	fi
+	@docker compose -f $(DOCKER_COMPOSE_PROD) exec app npx prisma migrate reset --force
 	$(call print_message,"✅ Base de datos reseteada")
 
 .PHONY: db-setup
@@ -549,9 +387,9 @@ db-setup: ## Configuración completa de base de datos (migrate + seed)
 	@$(MAKE) db-seed
 	$(call print_message,"✅ Base de datos configurada completamente")
 
-# ===============================
+# ========================================
 # COMANDOS RÁPIDOS
-# ===============================
+# ========================================
 
 .PHONY: quick-dev
 quick-dev: ## Inicio rápido para desarrollo
@@ -573,38 +411,22 @@ quick-stop: ## Parar todos los servicios
 	@$(MAKE) prod-down
 	$(call print_message,"✅ Todos los servicios detenidos")
 
-# ===============================
+# ========================================
 # ALIAS PARA NPM SCRIPTS
-# ===============================
-
-.PHONY: install
-install: ## Instalar dependencias (alias para npm install)
-	$(call print_step,"📦 Instalando dependencias...")
-	@npm install
-	$(call print_message,"✅ Dependencias instaladas")
-
-.PHONY: build
-build: ## Construir aplicación (alias para npm run build)
-	$(call print_step,"🔨 Construyendo aplicación...")
-	@npm run build
-	$(call print_message,"✅ Aplicación construida")
+# ========================================
 
 .PHONY: start
 start: ## Iniciar aplicación (alias para npm start)
-	$(call print_step,"🚀 Iniciando aplicación...")
 	@npm start
 
-.PHONY: dev
-dev: ## Iniciar desarrollo con hot reload (alias para npm run dev)
-	$(call print_step,"🔥 Iniciando desarrollo con hot reload...")
-	@npm run dev
+.PHONY: build
+build: ## Construir aplicación (alias para npm run build)
+	@npm run build
 
 .PHONY: test
 test: ## Ejecutar tests (alias para npm test)
-	$(call print_step,"🧪 Ejecutando tests...")
 	@npm test
 
 .PHONY: lint
-lint: ## Ejecutar linter (alias para npm run lint)
-	$(call print_step,"🔍 Ejecutando linter...")
+lint: ## Linting (alias para npm run lint)
 	@npm run lint
