@@ -14,16 +14,11 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: ${MYSQL_TIMEZONE}
-    command:
-      - "--default-authentication-plugin=mysql_native_password"
-      - "--character-set-server=utf8mb4"
-      - "--collation-server=utf8mb4_unicode_ci"
-      - "--innodb-buffer-pool-size=256M"
-      - "--innodb-log-file-size=64M"
-      - "--max-connections=200"
-      - "--query-cache-size=64M"
-      - "--query-cache-type=1"
-      - "--sql-mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO"
+    command: [
+      "--default-authentication-plugin=mysql_native_password",
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_unicode_ci"
+    ]
     ports:
       - "127.0.0.1:${MYSQL_PORT}:3306"
     volumes:
@@ -249,8 +244,5 @@ volumes:
 networks:
   oauth-prod-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
   proxy-network:
     external: true
