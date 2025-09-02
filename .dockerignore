@@ -1,14 +1,13 @@
-# Dependencies
-node_modules/
+# Node.js
+node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # Build outputs
-dist/
-build/
-.next/
-.nuxt/
+dist
+build
+.next
 
 # Environment files
 .env
@@ -18,20 +17,21 @@ build/
 .env.production
 
 # Logs
-logs/
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
 # Runtime data
-pids/
+pids
 *.pid
 *.seed
 *.pid.lock
 
 # Coverage directory used by tools like istanbul
-coverage/
+coverage
 *.lcov
 
 # nyc test coverage
@@ -43,6 +43,15 @@ jspm_packages/
 # Optional npm cache directory
 .npm
 
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
 # Optional REPL history
 .node_repl_history
 
@@ -52,36 +61,35 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env.test
-
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
 
-# next.js build output
+# Next.js build output
 .next
 
-# nuxt.js build output
+# Nuxt.js build / generate output
 .nuxt
+dist
 
-# vuepress build output
-.vuepress/dist
+# Gatsby files
+.cache/
+public
 
-# Serverless directories
-.serverless
+# Storybook build outputs
+.out
+.storybook-out
 
-# FuseBox cache
-.fusebox/
+# Temporary folders
+tmp/
+temp/
 
-# DynamoDB Local files
-.dynamodb/
-
-# TernJS port file
-.tern-port
-
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # OS generated files
 .DS_Store
@@ -92,48 +100,54 @@ jspm_packages/
 ehthumbs.db
 Thumbs.db
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
 # Docker
 Dockerfile*
 docker-compose*.yml
 .dockerignore
 
 # Git
-.git/
+.git
 .gitignore
 
-# Documentation
+# README and documentation
 README.md
-docs/
 *.md
+docs/
 
-# Test files
+# Tests
 test/
 tests/
-__tests__/
 *.test.js
 *.test.ts
 *.spec.js
 *.spec.ts
 
-# Temporary files
-tmp/
-temp/
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
 # Backup files
 *.bak
 *.backup
 backups/
 
-# SSL certificates (will be mounted separately)
-ssl/
-certs/
+# Development files
+.env.example
+env.prod.example
 
-# Monitoring files
-newrelic_agent.log
+# Temporary files
+*.tmp
+*.temp
