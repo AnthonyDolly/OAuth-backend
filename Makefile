@@ -203,9 +203,12 @@ health: ## Health check de servicios
 	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 	@echo
 	@echo "🌐 HEALTH CHECKS:"
-	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T app wget --no-verbose --tries=1 --spider http://localhost:3001/api/v1/health > /dev/null 2>&1 && echo "✅ Aplicación: OK" || echo "❌ Aplicación: FAILED"
-	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T mysql mysqladmin ping -h localhost -u oauth_user -p$$(grep MYSQL_PASSWORD $(ENV_PROD) | cut -d'=' -f2) > /dev/null 2>&1 && echo "✅ MySQL: OK" || echo "❌ MySQL: FAILED"
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T app wget --no-verbose --tries=1 --spider http://localhost:3001/api/v1/health > /dev/null 2>&1 && echo "✅ Aplicación: OK" || echo "❌ Aplicación: FAILED (Container internal check)"
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T mysql mysqladmin ping -h mysql -u $$(grep MYSQL_USER $(ENV_PROD) | cut -d'=' -f2) -p$$(grep MYSQL_PASSWORD $(ENV_PROD) | cut -d'=' -f2) > /dev/null 2>&1 && echo "✅ MySQL: OK" || echo "❌ MySQL: FAILED"
 	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) exec -T redis redis-cli -a $$(grep REDIS_PASSWORD $(ENV_PROD) | cut -d'=' -f2) ping > /dev/null 2>&1 && echo "✅ Redis: OK" || echo "❌ Redis: FAILED"
+	@echo
+	@echo "🔍 DETALLES DE LA APLICACIÓN:"
+	@docker compose -f $(DOCKER_COMPOSE_PROD) --env-file $(ENV_PROD) logs --tail=5 app 2>/dev/null || echo "No se pudieron obtener logs recientes"
 	@echo "=========================================="
 
 .PHONY: stats
