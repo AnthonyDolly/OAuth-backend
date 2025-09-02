@@ -6,7 +6,6 @@ RUN apk add --no-cache \
     dumb-init \
     openssl \
     ca-certificates \
-    mariadb-client \
     && rm -rf /var/cache/apk/*
 
 # Establecer directorio de trabajo
@@ -29,7 +28,6 @@ FROM node:lts-alpine AS builder
 RUN apk add --no-cache \
     openssl \
     ca-certificates \
-    mariadb-client \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
