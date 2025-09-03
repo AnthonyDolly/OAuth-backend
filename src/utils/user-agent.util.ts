@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { DeviceInfo } from '../types/session.types';
 import logger from './logger.util';
 
@@ -233,4 +234,100 @@ function detectOS(ua: string, deviceType: DeviceInfo['deviceType']): string {
   }
   
   return 'Unknown';
+}
+
+/**
+ * Get the real client IP address, considering proxies like Cloudflare
+ * Priority order:
+ * 1. CF-Connecting-IP (Cloudflare specific)
+ * 2. X-Forwarded-For (first IP in the chain)
+ * 3. X-Real-IP (alternative proxy header)
+ * 4. req.ip (Express proxy trust)
+ * 5. req.socket.remoteAddress (direct connection)
+ */
+export function getClientIP(req: Request): string {
+  // Cloudflare specific header (highest priority)
+  const cfConnectingIP = req.headers['cf-connecting-ip'] as string;
+  if (cfConnectingIP && isValidIP(cfConnectingIP)) {
+    logger.debug('Using CF-Connecting-IP for client IP', { ip: cfConnectingIP });
+    return cfConnectingIP;
+  }
+
+  // X-Forwarded-For header (contains chain of IPs, first is original client)
+  const xForwardedFor = req.headers['x-forwarded-for'] as string;
+  if (xForwardedFor) {
+    // Take the first IP in the chain (original client)
+    const firstIP = xForwardedFor.split(',')[0].trim();
+    if (isValidIP(firstIP)) {
+      logger.debug('Using X-Forwarded-For for client IP', { ip: firstIP, original: xForwardedFor });
+      return firstIP;
+    }
+  }
+
+  // X-Real-IP header (alternative proxy header)
+  const xRealIP = req.headers['x-real-ip'] as string;
+  if (xRealIP && isValidIP(xRealIP)) {
+    logger.debug('Using X-Real-IP for client IP', { ip: xRealIP });
+    return xRealIP;
+  }
+
+  // Express proxy trust (req.ip)
+  if (req.ip && isValidIP(req.ip)) {
+    logger.debug('Using req.ip for client IP', { ip: req.ip });
+    return req.ip;
+  }
+
+  // Direct socket connection
+  const remoteAddress = req.socket?.remoteAddress;
+  if (remoteAddress && isValidIP(remoteAddress)) {
+    // Handle IPv6-mapped IPv4 addresses
+    let finalIP = remoteAddress;
+    if (remoteAddress === '::ffff:127.0.0.1') {
+      finalIP = '127.0.0.1';
+    } else if (remoteAddress.startsWith('::ffff:')) {
+      finalIP = remoteAddress.substring(7);
+    }
+
+    logger.debug('Using socket remoteAddress for client IP', {
+      original: remoteAddress,
+      final: finalIP
+    });
+    return finalIP;
+  }
+
+  logger.warn('Could not determine client IP, using unknown');
+  return 'unknown';
+}
+
+/**
+ * Validate if a string is a valid IP address (IPv4 or IPv6)
+ */
+function isValidIP(ip: string): boolean {
+  if (!ip || ip === 'unknown') {
+    return false;
+  }
+
+  // IPv4 validation
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (ipv4Regex.test(ip)) {
+    const parts = ip.split('.');
+    return parts.every(part => {
+      const num = parseInt(part, 10);
+      return num >= 0 && num <= 255;
+    });
+  }
+
+  // IPv6 validation (basic)
+  const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
+  if (ipv6Regex.test(ip)) {
+    return true;
+  }
+
+  // IPv6-mapped IPv4
+  const ipv6MappedRegex = /^::ffff:(\d{1,3}\.){3}\d{1,3}$/;
+  if (ipv6MappedRegex.test(ip)) {
+    return true;
+  }
+
+  return false;
 }

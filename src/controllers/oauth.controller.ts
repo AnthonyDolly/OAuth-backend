@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { generateTokens } from '../services/token.service';
 import { createUserSession } from '../services/session.service';
+import { getClientIP } from '../utils/user-agent.util';
 import config from '../config/env';
 import prisma from '../config/database';
 
@@ -13,7 +14,7 @@ export async function callback(
     const user = req.user as any;
 
     // Extract device context for both tokens and session
-    const ipAddress = req.ip || req.socket?.remoteAddress || 'unknown';
+    const ipAddress = getClientIP(req);
     const userAgent = req.get('User-Agent');
 
     const { accessToken, refreshToken } = await generateTokens(

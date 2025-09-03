@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import logger from '../utils/logger.util';
 import { recordAuditEvent } from '../services/audit.service';
+import { getClientIP } from '../utils/user-agent.util';
 
 export function errorMiddleware(err: any, _req: Request, res: Response, _next: NextFunction) {
   const status = err.status || err.statusCode || 500;
@@ -24,7 +25,7 @@ export function errorMiddleware(err: any, _req: Request, res: Response, _next: N
       resourceId: null,
       details: { code, details },
       success: false,
-      ipAddress: _req.ip,
+      ipAddress: getClientIP(_req),
       userAgent: _req.headers['user-agent'] || null
     });
   } catch (_) { /* ignore audit errors */ }

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as UserService from '../services/user.service';
 import { UpdateProfileBody } from '../types/user.types';
 import { updateSessionAccess } from '../services/session.service';
+import { getClientIP } from '../utils/user-agent.util';
 import jwt from 'jsonwebtoken';
 
 export async function getProfile(
@@ -96,7 +97,7 @@ export async function listSessions(
 
     // Update current session access time
     if (currentSessionJti) {
-      const ipAddress = req.ip || req.socket?.remoteAddress || 'unknown';
+      const ipAddress = getClientIP(req);
       updateSessionAccess(currentSessionJti, ipAddress).catch(() => {
         // Ignore errors in background update
       });

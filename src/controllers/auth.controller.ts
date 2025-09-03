@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as AuthService from '../services/auth.service';
 import { LoginRequestBody, RegisterRequestBody } from '../types/auth.types';
+import { getClientIP } from '../utils/user-agent.util';
 
 export async function register(
   req: Request<any, any, RegisterRequestBody>,
@@ -9,7 +10,7 @@ export async function register(
 ) {
   try {
     const { email, password } = req.body;
-    const ipAddress = req.ip || req.socket?.remoteAddress || 'unknown';
+    const ipAddress = getClientIP(req);
     const userAgent = req.get('User-Agent');
     const result = await AuthService.register(email, password, ipAddress, userAgent);
     return res.status(201).json({
@@ -32,7 +33,7 @@ export async function register(
 export async function login(req: Request<any, any, LoginRequestBody>, res: Response, next: NextFunction) {
   try {
     const { email, password, code, backup_code } = req.body;
-    const ipAddress = req.ip || req.socket?.remoteAddress || 'unknown';
+    const ipAddress = getClientIP(req);
     const userAgent = req.get('User-Agent');
     const result = await AuthService.login(email, password, ipAddress, code, backup_code, userAgent);
     return res.status(200).json({
